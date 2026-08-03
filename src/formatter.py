@@ -16,8 +16,12 @@ def center(text: str, width: int, fill: str = " ") -> str:
     return fill * left + text + fill * right
 
 
-def pad_right(text: str, width: int) -> str:
+def left(text: str, width: int) -> str:
     return text + " " * max(0, width - len(text))
+
+
+def right(text: str, width: int) -> str:
+    return " " * max(0, width - len(text)) + text
 
 
 def format_day_label(d: date) -> str:
@@ -33,7 +37,7 @@ def format_day_label(d: date) -> str:
 
 
 def short_weather(description: str) -> str:
-    """Shorten weather descriptions so they fit on small font lines."""
+    """Shorten weather descriptions for the forecast column."""
     mapping = {
         "Mainly clear": "Mainly clr",
         "Partly cloudy": "Part cldy",
@@ -56,6 +60,14 @@ def short_weather(description: str) -> str:
         "Violent rain showers": "H showers",
     }
     return mapping.get(description, description[:12])
+
+
+def forecast_row(day_text: str, desc: str, temp_text: str, width: int = 42) -> str:
+    """Build a three-column forecast row: date | weather | temp."""
+    col1_w = 8
+    col3_w = 12
+    col2_w = width - col1_w - col3_w
+    return left(day_text, col1_w) + center(desc, col2_w)[:col2_w] + right(temp_text, col3_w)
 
 
 def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line]:
@@ -91,19 +103,14 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
     lines.append(("normal_left", f"Precip: {report.current.precipitation:.1f}mm"))
     lines.append(("blank", ""))
 
-    # Forecast header
-    lines.append(("normal_center", "3-Day Forecast"))
-    lines.append(("small_sep", "-" * small_w))
+    # Forecast header (big)
+    lines.append(("big_center", "3-Day Forecast"))
+    lines.append(("normal_sep", "=" * normal_w))
     for forecast in report.daily_forecasts:
         day_text = format_day_label(forecast.date)
         temp_text = f"{forecast.temp_min:.0f}/{forecast.temp_max:.0f}C"
         desc = short_weather(forecast.description)
-        base = f"{day_text} {desc} {temp_text}"
-        if len(base) > small_w:
-            avail = small_w - len(day_text) - len(temp_text) - 2
-            desc = desc[:max(avail, 3)]
-            base = f"{day_text} {desc} {temp_text}"
-        lines.append(("small_left", base))
+        lines.append(("small_left", forecast_row(day_text, desc, temp_text, small_w)))
     lines.append(("blank", ""))
 
     # Footer

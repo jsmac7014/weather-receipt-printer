@@ -22,6 +22,7 @@ SIZE_1X2 = b"\x1d\x21\x10"
 CP437 = b"\x1b\x74\x00"
 LINE_SPACING = bytes([0x1B, 0x33, 24])
 RESET = b"\x1b\x40"
+CUT_FULL = b"\x1d\x56\x00"
 
 
 def build_printer(config: Dict):
@@ -48,6 +49,8 @@ def _style_command(style: str) -> bytes:
     """Return ESC/POS bytes for the requested style."""
     if style == "big_center":
         return FONT_A + CENTER + BOLD_ON + SIZE_1X2
+    elif style == "big_sep":
+        return FONT_A + CENTER + BOLD_OFF + SIZE_1X1
     elif style == "normal_center":
         return FONT_A + CENTER + BOLD_OFF + SIZE_1X1
     elif style == "normal_left":
@@ -88,14 +91,11 @@ def print_receipt(lines: List[Line], printer_config: Dict) -> None:
             buffer.extend(_encode(text))
             buffer.extend(b"\n")
 
-        p._raw(bytes(buffer))
-
+        # Add cut command to the same buffer so it happens after printing.
         if printer_config.get("cut", True):
-            try:
-                p.cut()
-            except Exception as exc:
-                logger.warning("Cut failed (printer may not support it): %s", exc)
+            buffer.extend(CUT_FULL)
 
+        p._raw(bytes(buffer))
         p.close()
     except Exception as exc:
         logger.error("Error during printing: %s", exc)
