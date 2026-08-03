@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from datetime import date, datetime
-from typing import List
+from datetime import date, datetime, timedelta
+from typing import List, Optional
 
 import httpx
 
@@ -61,14 +61,27 @@ class DailyForecast:
 
 
 @dataclass
+class HourlyForecast:
+    time: datetime
+    temperature: float
+    weather_code: int
+    description: str
+
+
+@dataclass
 class WeatherReport:
     location_name: str
     current: CurrentWeather
     daily_forecasts: List[DailyForecast]
+    hourly_forecasts: List[HourlyForecast]
 
 
 def describe_weather(code: int) -> str:
     return WEATHER_CODE_MAP.get(code, "Other")
+
+
+def _parse_iso_datetime(value: str) -> datetime:
+    return datetime.fromisoformat(value)
 
 
 def fetch_weather(
@@ -83,6 +96,7 @@ def fetch_weather(
         "longitude": longitude,
         "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,snowfall,weather_code,wind_speed_10m",
         "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+        "hourly": "temperature_2m,weather_code",
         "timezone": timezone,
         "forecast_days": 3,
     }
@@ -121,8 +135,35 @@ def fetch_weather(
             )
         )
 
+    hourly = data.get("hourly", {})
+    hourly_forecasts: List[HourlyForecast] = []
+    hour_times = [_parse_iso_datetime(t) for t in hourly.get("time", [])]
+    hour_temps = hourly.get("temperature_2m", [])
+    hour_codes = hourly.get("weather_code", [])
+
+    for i in range(len(hour_times)):
+        hourly_forecasts.append(
+            HourlyForecast(
+                time=hour_times[i],
+                temperature=float(hour_temps[i]) if i < len(hour_temps) else 0.0,
+                weather_code=int(hour_codes[i]) if i < len(hour_codes) else 0,
+                description=describe_weather(int(hour_codes[i]) if i < len(hour_codes) else 0),
+            )
+        )
+
     return WeatherReport(
         location_name=location_name,
         current=current_weather,
         daily_forecasts=daily_forecasts,
+        hourly_forecasts=hourly_forecasts,
     )
+
+
+def get_upcoming_hourly(
+    hourly: List[HourlyForecast],
+    from_time: datetime,
+    hours: int = 5,
+) -> List[HourlyForecast]:
+    """Return the next N hourly forecasts starting at or after from_time."""
+    upcoming = [h for h in hourly if h.time >= from_time]
+    return upcoming[:hours]

@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Add project root to Python path
@@ -9,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.config import get_location, get_printer_config, load_config
 from src.formatter import format_weather_report
 from src.printer import print_receipt, print_to_console
-from src.weather import fetch_weather
+from src.weather import fetch_weather, get_upcoming_hourly
 
 
 logging.basicConfig(
@@ -20,7 +21,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main(config_path: str, dry_run: bool = False) -> int:
+def choose_mode(now: datetime) -> str:
+    """Morning prints daily forecast; afternoon/evening prints hourly forecast."""
+    hour = now.hour
+    if hour < 12:
+        return "morning"
+    return "afternoon"
+
+
+def main(config_path: str, dry_run: bool = False, mode: str = None) -> int:
     try:
         config = load_config(config_path)
     except FileNotFoundError:
@@ -33,7 +42,10 @@ def main(config_path: str, dry_run: bool = False) -> int:
     location = get_location(config)
     printer_config = get_printer_config(config)
 
-    logger.info("Fetching weather data for: %s", location["name"])
+    if mode is None:
+        mode = choose_mode(datetime.now())
+    logger.info("Running in %s mode for: %s", mode, location["name"])
+
     try:
         report = fetch_weather(
             latitude=location["latitude"],
@@ -44,7 +56,18 @@ def main(config_path: str, dry_run: bool = False) -> int:
         logger.error("Failed to fetch weather: %s", exc)
         return 1
 
-    lines = format_weather_report(report, columns=int(printer_config.get("columns", 32)))
+    if mode == "afternoon":
+        report.hourly_forecasts = get_upcoming_hourly(
+            report.hourly_forecasts,
+            from_time=datetime.now(),
+            hours=5,
+        )
+
+    lines = format_weather_report(
+        report,
+        mode=mode,
+        columns=int(printer_config.get("columns", 21)),
+    )
 
     if dry_run:
         logger.info("Dry-run mode: printing to console only.")
@@ -74,6 +97,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Print to console instead of the physical printer",
     )
+    parser.add_argument(
+        "--mode",
+        choices=["morning", "afternoon"],
+        help="Override print mode (default: auto by current hour)",
+    )
     args = parser.parse_args()
 
-    sys.exit(main(args.config, args.dry_run))
+    sys.exit(main(args.config, args.dry_run, args.mode))

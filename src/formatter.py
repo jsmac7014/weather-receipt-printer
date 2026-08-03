@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List, Tuple
 
-from src.weather import DailyForecast, WeatherReport
+from src.weather import DailyForecast, HourlyForecast, WeatherReport
 
 
 Style = str
@@ -54,37 +54,31 @@ def short_weather(description: str) -> str:
     return mapping.get(description, description[:7])
 
 
-def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line]:
+def _common_header(report: WeatherReport, w: int) -> List[Line]:
     lines: List[Line] = []
-    w = columns
-
-    # Top decoration
     lines.append(("normal_sep", "=" * w))
     lines.append(("big_center", "Today's Weather"))
     lines.append(("normal_sep", "=" * w))
     lines.append(("blank", ""))
-
-    # Location and date
     lines.append(("big_center", report.location_name))
     lines.append(("normal_center", report.current.updated_at.strftime("%Y-%m-%d %H:%M")))
     lines.append(("blank", ""))
-
-    # Current weather summary
     lines.append(("big_center", report.current.description))
     lines.append(("big_center", f"{report.current.temperature:.1f}C"))
     lines.append(("blank", ""))
-
-    # Detail rows (center aligned)
     lines.append(("normal_center", f"Feels like: {report.current.apparent_temperature:.1f}C"))
     lines.append(("normal_center", f"Humidity: {report.current.humidity}%"))
     lines.append(("normal_center", f"Wind: {report.current.wind_speed:.1f}m/s"))
     lines.append(("normal_center", f"Precip: {report.current.precipitation:.1f}mm"))
     lines.append(("blank", ""))
+    return lines
 
-    # Forecast header (big)
+
+def _daily_forecast_section(forecasts: List[DailyForecast], w: int) -> List[Line]:
+    lines: List[Line] = []
     lines.append(("big_center", "3-Day Forecast"))
     lines.append(("normal_sep", "=" * w))
-    for forecast in report.daily_forecasts:
+    for forecast in forecasts:
         day_text = format_day_label(forecast.date)
         temp_text = f"{forecast.temp_min:.0f}/{forecast.temp_max:.0f}C"
         desc = short_weather(forecast.description)
@@ -94,12 +88,42 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
             desc = desc[:max(avail, 3)]
             row = f"{day_text} {desc} {temp_text}"
         lines.append(("normal_center", row))
-    lines.append(("blank", ""))
+    return lines
 
-    # Footer
+
+def _hourly_forecast_section(forecasts: List[HourlyForecast], w: int) -> List[Line]:
+    lines: List[Line] = []
+    lines.append(("big_center", "Hourly Forecast"))
+    lines.append(("normal_sep", "=" * w))
+    for forecast in forecasts:
+        time_text = forecast.time.strftime("%H:%M")
+        desc = short_weather(forecast.description)
+        temp_text = f"{forecast.temperature:.1f}C"
+        row = f"{time_text} {desc} {temp_text}"
+        if len(row) > w:
+            avail = w - len(time_text) - len(temp_text) - 2
+            desc = desc[:max(avail, 3)]
+            row = f"{time_text} {desc} {temp_text}"
+        lines.append(("normal_center", row))
+    return lines
+
+
+def format_weather_report(
+    report: WeatherReport,
+    mode: str = "morning",
+    columns: int = 21,
+) -> List[Line]:
+    w = columns
+    lines: List[Line] = _common_header(report, w)
+
+    if mode == "morning":
+        lines.extend(_daily_forecast_section(report.daily_forecasts, w))
+    else:
+        lines.extend(_hourly_forecast_section(report.hourly_forecasts, w))
+
+    lines.append(("blank", ""))
     lines.append(("normal_center", "Open-Meteo"))
     lines.append(("normal_sep", "=" * w))
-    # Extra blank lines to avoid cutting off the footer
     lines.append(("blank", ""))
     lines.append(("blank", ""))
 
