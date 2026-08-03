@@ -63,7 +63,7 @@ def _apply_style(printer, style: str) -> None:
         )
     elif style == "normal_sep":
         printer.set(
-            align="left",
+            align="center",
             bold=False,
             double_height=False,
             double_width=False,
