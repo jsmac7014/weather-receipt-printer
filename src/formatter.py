@@ -39,33 +39,33 @@ def format_day_label(d: date) -> str:
 def short_weather(description: str) -> str:
     """Shorten weather descriptions for the forecast column."""
     mapping = {
-        "Mainly clear": "Mainly clr",
-        "Partly cloudy": "Part cldy",
+        "Mainly clear": "M clear",
+        "Partly cloudy": "P cldy",
         "Clear sky": "Clear",
         "Overcast": "Cloudy",
-        "Light drizzle": "L drizzle",
-        "Moderate drizzle": "Drizzle",
-        "Dense drizzle": "H drizzle",
+        "Light drizzle": "L drzl",
+        "Moderate drizzle": "Drzl",
+        "Dense drizzle": "H drzl",
         "Slight rain": "L rain",
         "Moderate rain": "Rain",
         "Heavy rain": "H rain",
         "Slight snow": "L snow",
         "Moderate snow": "Snow",
         "Heavy snow": "H snow",
-        "Thunderstorm": "T-storm",
-        "Thunderstorm with slight hail": "T-storm+hail",
-        "Thunderstorm with heavy hail": "T-storm+hail",
-        "Slight rain showers": "L showers",
-        "Moderate rain showers": "Showers",
-        "Violent rain showers": "H showers",
+        "Thunderstorm": "Tstorm",
+        "Thunderstorm with slight hail": "T+hail",
+        "Thunderstorm with heavy hail": "T+hail",
+        "Slight rain showers": "L shwr",
+        "Moderate rain showers": "Shower",
+        "Violent rain showers": "H shwr",
     }
-    return mapping.get(description, description[:12])
+    return mapping.get(description, description[:6])
 
 
-def forecast_row(day_text: str, desc: str, temp_text: str, width: int = 42) -> str:
+def forecast_row(day_text: str, desc: str, temp_text: str, width: int = 21) -> str:
     """Build a three-column forecast row: date | weather | temp."""
-    col1_w = 8
-    col3_w = 12
+    col1_w = 6
+    col3_w = 7
     col2_w = width - col1_w - col3_w
     return left(day_text, col1_w) + center(desc, col2_w)[:col2_w] + right(temp_text, col3_w)
 
@@ -73,17 +73,13 @@ def forecast_row(day_text: str, desc: str, temp_text: str, width: int = 42) -> s
 def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line]:
     lines: List[Line] = []
 
-    # Large font width (Font A, height 2x)
-    big_w = columns
-    # Normal font width (Font A, height 1x)
-    normal_w = columns
-    # Small font width (Font B, height 1x)
-    small_w = columns * 2
+    # All text now prints with Font A, so every line must fit within 'columns'.
+    w = columns
 
     # Top decoration
-    lines.append(("normal_sep", "=" * normal_w))
+    lines.append(("normal_sep", "=" * w))
     lines.append(("big_center", "Today's Weather"))
-    lines.append(("normal_sep", "=" * normal_w))
+    lines.append(("normal_sep", "=" * w))
     lines.append(("blank", ""))
 
     # Location and date
@@ -105,16 +101,16 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
 
     # Forecast header (big)
     lines.append(("big_center", "3-Day Forecast"))
-    lines.append(("normal_sep", "=" * normal_w))
+    lines.append(("normal_sep", "=" * w))
     for forecast in report.daily_forecasts:
         day_text = format_day_label(forecast.date)
         temp_text = f"{forecast.temp_min:.0f}/{forecast.temp_max:.0f}C"
         desc = short_weather(forecast.description)
-        lines.append(("small_left", forecast_row(day_text, desc, temp_text, small_w)))
+        lines.append(("small_left", forecast_row(day_text, desc, temp_text, w)))
     lines.append(("blank", ""))
 
     # Footer
     lines.append(("normal_center", "Open-Meteo"))
-    lines.append(("normal_sep", "=" * normal_w))
+    lines.append(("normal_sep", "=" * w))
 
     return lines
