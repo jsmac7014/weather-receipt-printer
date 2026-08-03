@@ -9,6 +9,18 @@ logger = logging.getLogger(__name__)
 # (style, text) tuples from formatter
 Line = Tuple[str, str]
 
+# ESC/POS raw command fragments
+LEFT = b"\x1b\x61\x00"
+CENTER = b"\x1b\x61\x01"
+RIGHT = b"\x1b\x61\x02"
+BOLD_ON = b"\x1b\x45\x01"
+BOLD_OFF = b"\x1b\x45\x00"
+FONT_A = b"\x1b\x4d\x00"
+FONT_B = b"\x1b\x4d\x01"
+SIZE_1X1 = b"\x1d\x21\x00"
+SIZE_1X2 = b"\x1d\x21\x10"
+SIZE_2X2 = b"\x1d\x21\x11"
+
 
 def build_printer(config: Dict):
     if "usb" in config:
@@ -36,64 +48,19 @@ def _set_line_spacing(printer, spacing: int = 24) -> None:
 
 
 def _apply_style(printer, style: str) -> None:
-    FONT_A = b"\x1b\x4d\x00"  # normal/default font
-    FONT_B = b"\x1b\x4d\x01"  # smaller font
-
+    """Apply ESC/POS font, size, alignment and bold by raw bytes."""
     if style == "big_center":
-        printer._raw(FONT_A)
-        printer.set(
-            align="center",
-            bold=True,
-            double_height=False,
-            double_width=False,
-            custom_size=True,
-            width=1,
-            height=2,
-        )
+        printer._raw(FONT_A + CENTER + BOLD_ON + SIZE_1X2)
     elif style == "normal_center":
-        printer._raw(FONT_A)
-        printer.set(
-            align="center",
-            bold=False,
-            double_height=False,
-            double_width=False,
-            custom_size=True,
-            width=1,
-            height=1,
-        )
+        printer._raw(FONT_A + CENTER + BOLD_OFF + SIZE_1X1)
     elif style == "normal_left":
-        printer._raw(FONT_A)
-        printer.set(
-            align="left",
-            bold=False,
-            double_height=False,
-            double_width=False,
-            custom_size=True,
-            width=1,
-            height=1,
-        )
+        printer._raw(FONT_A + LEFT + BOLD_OFF + SIZE_1X1)
     elif style == "normal_sep":
-        printer._raw(FONT_A)
-        printer.set(
-            align="left",
-            bold=False,
-            double_height=False,
-            double_width=False,
-            custom_size=True,
-            width=1,
-            height=1,
-        )
-    elif style in ("small_left", "small_sep"):
-        printer._raw(FONT_B)
-        printer.set(
-            align="left",
-            bold=False,
-            double_height=False,
-            double_width=False,
-            custom_size=True,
-            width=1,
-            height=1,
-        )
+        printer._raw(FONT_A + LEFT + BOLD_OFF + SIZE_1X1)
+    elif style == "small_left":
+        printer._raw(FONT_B + LEFT + BOLD_OFF + SIZE_1X1)
+    elif style == "small_sep":
+        printer._raw(FONT_B + LEFT + BOLD_OFF + SIZE_1X1)
 
 
 def print_receipt(lines: List[Line], printer_config: Dict) -> None:
