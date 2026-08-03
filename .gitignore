@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.log
+venv/
+.venv/
+.env
+
+# Build artifacts
+*.tar.gz
+
+# macOS
+.DS_Store

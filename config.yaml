@@ -1,0 +1,19 @@
+location:
+  # Latitude and longitude (default: Seoul)
+  latitude: 37.5665
+  longitude: 126.9780
+  # Name printed on the receipt (should fit in large-font width)
+  name: "Seoul"
+
+schedule:
+  # Daily print time (HH:MM)
+  print_time: "07:00"
+
+printer:
+  # Linux USB ESC/POS printer device path
+  device: "/dev/usb/lp4"
+  # Number of large-font (Font A) columns that fit on the paper.
+  # For this 79mm Bixolon printer it is 21.
+  columns: 21
+  # Cut paper after printing
+  cut: true

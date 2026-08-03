@@ -1,0 +1,87 @@
+# Fix permission and re-deploy after dry-run success
+
+## Current issue
+- Printer device: `/dev/usb/lp4`
+- Error: `Permission denied` when running as a regular user
+- Solution: fix udev rules, then re-deploy
+
+## 1. Repackage locally with the English update
+
+```bash
+cd /Users/jungwoosong/Developer/thermal/weather
+tar --exclude='venv' --exclude='__pycache__' --exclude='*.pyc' --exclude='.DS_Store' --exclude='weather-receipt-printer.tar.gz' -czf weather-receipt-printer.tar.gz .
+```
+
+## 2. SCP to the notebook
+
+```bash
+scp /Users/jungwoosong/Developer/thermal/weather/weather-receipt-printer.tar.gz jungwoos@192.168.0.100:~/weather-receipt-printer.tar.gz
+```
+
+## 3. Replace the notebook folder
+
+```bash
+ssh jungwoos@192.168.0.100
+rm -rf ~/weather-receipt-printer-old
+mv ~/weather-receipt-printer ~/weather-receipt-printer-old
+mkdir -p ~/weather-receipt-printer
+tar -xzf ~/weather-receipt-printer.tar.gz -C ~/weather-receipt-printer
+cd ~/weather-receipt-printer
+```
+
+## 4. Rebuild the virtual environment
+
+```bash
+cd ~/weather-receipt-printer
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+python3 main.py --dry-run
+```
+
+## 5. Add udev rule for USB printer permission
+
+Find the vendor/product id of the printer.
+
+```bash
+lsusb
+```
+
+Example output:
+
+```
+Bus 001 Device 005: ID 04b8:0202 Seiko Epson Corp. Thermal Printer
+```
+
+Replace `04b8` and `0202` below with the actual values from your `lsusb` output.
+
+```bash
+sudo tee /etc/udev/rules.d/99-thermal-printer.rules <<'EOF'
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b8", ATTR{idProduct}=="0202", MODE="0666", GROUP="lp"
+EOF
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Unplug and replug the printer, or reboot the notebook.
+
+## 6. Test physical print
+
+```bash
+cd ~/weather-receipt-printer
+source .venv/bin/activate
+python3 main.py
+```
+
+If the udev rule is not yet applied, use sudo with the venv Python temporarily:
+
+```bash
+sudo $(which python3) main.py
+```
+
+## Notes
+
+- `config.yaml` is now set to English output and 48 columns for a 79mm printer.
+- `src/printer.py` now uses CP437 for reliable ASCII output.
+- If text is still garbled, make sure the printer supports the default codepage and the font size matches the 48-column layout.
