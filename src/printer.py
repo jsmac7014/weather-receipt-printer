@@ -30,23 +30,17 @@ def build_printer(config: Dict):
     return File(devfile=device)
 
 
-def _set_line_spacing(printer, spacing: int = 20) -> None:
-    """ESC 3 n: set line spacing in 1/180 inches (default ~30)."""
+def _set_line_spacing(printer, spacing: int = 24) -> None:
+    """ESC 3 n: set line spacing in 1/180 inches (default ~24)."""
     printer._raw(bytes([0x1B, 0x33, spacing]))
 
 
-def _print_line(printer, style: str, text: str) -> None:
-    # ESC/POS raw bytes for font selection
+def _apply_style(printer, style: str) -> None:
     FONT_A = b"\x1b\x4d\x00"  # normal/default font
     FONT_B = b"\x1b\x4d\x01"  # smaller font
 
-    if style == "blank":
-        printer.text("\n")
-        return
-
     if style == "big_center":
         printer._raw(FONT_A)
-        # Height 2x, width 1x so centering stays within 21 columns.
         printer.set(
             align="center",
             bold=True,
@@ -56,8 +50,8 @@ def _print_line(printer, style: str, text: str) -> None:
             width=1,
             height=2,
         )
-    elif style == "small_center":
-        printer._raw(FONT_B)
+    elif style == "normal_center":
+        printer._raw(FONT_A)
         printer.set(
             align="center",
             bold=False,
@@ -67,7 +61,29 @@ def _print_line(printer, style: str, text: str) -> None:
             width=1,
             height=1,
         )
-    elif style == "small_left":
+    elif style == "normal_left":
+        printer._raw(FONT_A)
+        printer.set(
+            align="left",
+            bold=False,
+            double_height=False,
+            double_width=False,
+            custom_size=True,
+            width=1,
+            height=1,
+        )
+    elif style == "normal_sep":
+        printer._raw(FONT_A)
+        printer.set(
+            align="left",
+            bold=False,
+            double_height=False,
+            double_width=False,
+            custom_size=True,
+            width=1,
+            height=1,
+        )
+    elif style in ("small_left", "small_sep"):
         printer._raw(FONT_B)
         printer.set(
             align="left",
@@ -78,19 +94,6 @@ def _print_line(printer, style: str, text: str) -> None:
             width=1,
             height=1,
         )
-    elif style == "sep":
-        printer._raw(FONT_B)
-        printer.set(
-            align="left",
-            bold=False,
-            double_height=False,
-            double_width=False,
-            custom_size=True,
-            width=1,
-            height=1,
-        )
-
-    printer.text(text + "\n")
 
 
 def print_receipt(lines: List[Line], printer_config: Dict) -> None:
@@ -101,14 +104,15 @@ def print_receipt(lines: List[Line], printer_config: Dict) -> None:
         raise
 
     try:
-        # ASCII reliable codepage
         p.codepage = "CP437"
-
-        # Slightly tighter line spacing
-        _set_line_spacing(p, 20)
+        _set_line_spacing(p, 24)
 
         for style, text in lines:
-            _print_line(p, style, text)
+            if style == "blank":
+                p.text("\n")
+                continue
+            _apply_style(p, style)
+            p.text(text + "\n")
 
         if printer_config.get("cut", True):
             try:

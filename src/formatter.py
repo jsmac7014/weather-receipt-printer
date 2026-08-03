@@ -61,20 +61,22 @@ def short_weather(description: str) -> str:
 def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line]:
     lines: List[Line] = []
 
-    # Large font width (Font A on the paper)
+    # Large font width (Font A, height 2x)
     big_w = columns
-    # Small font width (Font B; adjust if text still wraps or drifts)
-    small_w = 35
+    # Normal font width (Font A, height 1x)
+    normal_w = columns
+    # Small font width (Font B, height 1x)
+    small_w = columns * 2
 
     # Top decoration
-    lines.append(("sep", "=" * big_w))
+    lines.append(("normal_sep", "=" * normal_w))
     lines.append(("big_center", "Today's Weather"))
-    lines.append(("sep", "=" * big_w))
+    lines.append(("normal_sep", "=" * normal_w))
     lines.append(("blank", ""))
 
     # Location and date
     lines.append(("big_center", report.location_name))
-    lines.append(("small_center", report.current.updated_at.strftime("%Y-%m-%d %H:%M")))
+    lines.append(("normal_center", report.current.updated_at.strftime("%Y-%m-%d %H:%M")))
     lines.append(("blank", ""))
 
     # Current weather summary
@@ -82,16 +84,16 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
     lines.append(("big_center", f"{report.current.temperature:.1f}C"))
     lines.append(("blank", ""))
 
-    # Detail rows (small font, simple Label: Value)
-    lines.append(("small_left", f"Feels like: {report.current.apparent_temperature:.1f}C"))
-    lines.append(("small_left", f"Humidity: {report.current.humidity}%"))
-    lines.append(("small_left", f"Wind: {report.current.wind_speed:.1f}m/s"))
-    lines.append(("small_left", f"Precip: {report.current.precipitation:.1f}mm"))
+    # Detail rows (normal font)
+    lines.append(("normal_left", f"Feels like: {report.current.apparent_temperature:.1f}C"))
+    lines.append(("normal_left", f"Humidity: {report.current.humidity}%"))
+    lines.append(("normal_left", f"Wind: {report.current.wind_speed:.1f}m/s"))
+    lines.append(("normal_left", f"Precip: {report.current.precipitation:.1f}mm"))
     lines.append(("blank", ""))
 
     # Forecast header
-    lines.append(("small_center", "3-Day Forecast"))
-    lines.append(("sep", "-" * small_w))
+    lines.append(("normal_center", "3-Day Forecast"))
+    lines.append(("small_sep", "-" * small_w))
     for forecast in report.daily_forecasts:
         day_text = format_day_label(forecast.date)
         temp_text = f"{forecast.temp_min:.0f}/{forecast.temp_max:.0f}C"
@@ -105,7 +107,7 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
     lines.append(("blank", ""))
 
     # Footer
-    lines.append(("small_center", "Open-Meteo"))
-    lines.append(("sep", "=" * big_w))
+    lines.append(("normal_center", "Open-Meteo"))
+    lines.append(("normal_sep", "=" * normal_w))
 
     return lines
