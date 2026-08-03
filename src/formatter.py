@@ -63,8 +63,8 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
 
     # Large font width (Font A on the paper)
     big_w = columns
-    # Small font width (Font B is roughly half width, so ~2x characters)
-    small_w = columns * 2
+    # Small font width (Font B; adjust if text still wraps or drifts)
+    small_w = 35
 
     # Top decoration
     lines.append(("sep", "=" * big_w))
@@ -82,14 +82,11 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
     lines.append(("big_center", f"{report.current.temperature:.1f}C"))
     lines.append(("blank", ""))
 
-    # Detail rows (small font)
-    def row(label: str, value: str) -> str:
-        return pad_right(label, small_w - len(value)) + value
-
-    lines.append(("small_left", row("Feels like", f"{report.current.apparent_temperature:.1f}C")))
-    lines.append(("small_left", row("Humidity", f"{report.current.humidity}%")))
-    lines.append(("small_left", row("Wind", f"{report.current.wind_speed:.1f}m/s")))
-    lines.append(("small_left", row("Precip", f"{report.current.precipitation:.1f}mm")))
+    # Detail rows (small font, simple Label: Value)
+    lines.append(("small_left", f"Feels like: {report.current.apparent_temperature:.1f}C"))
+    lines.append(("small_left", f"Humidity: {report.current.humidity}%"))
+    lines.append(("small_left", f"Wind: {report.current.wind_speed:.1f}m/s"))
+    lines.append(("small_left", f"Precip: {report.current.precipitation:.1f}mm"))
     lines.append(("blank", ""))
 
     # Forecast header
@@ -99,7 +96,6 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
         day_text = format_day_label(forecast.date)
         temp_text = f"{forecast.temp_min:.0f}/{forecast.temp_max:.0f}C"
         desc = short_weather(forecast.description)
-        # If the line is too long, truncate from description
         base = f"{day_text} {desc} {temp_text}"
         if len(base) > small_w:
             avail = small_w - len(day_text) - len(temp_text) - 2

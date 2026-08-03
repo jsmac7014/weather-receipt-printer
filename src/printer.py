@@ -41,7 +41,8 @@ def _print_line(printer, style: str, text: str) -> None:
 
     if style == "big_center":
         printer._raw(FONT_A)
-        printer.set(align="center", bold=True, double_height=True, double_width=True)
+        # Use double height only; double width breaks 21-column centering.
+        printer.set(align="center", bold=True, double_height=True, double_width=False)
     elif style == "small_center":
         printer._raw(FONT_B)
         printer.set(align="center", bold=False, double_height=False, double_width=False)
