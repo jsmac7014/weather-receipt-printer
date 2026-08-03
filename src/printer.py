@@ -20,6 +20,8 @@ FONT_B = b"\x1b\x4d\x01"
 SIZE_1X1 = b"\x1d\x21\x00"
 SIZE_1X2 = b"\x1d\x21\x10"
 SIZE_2X2 = b"\x1d\x21\x11"
+CP437 = b"\x1b\x74\x00"
+LINE_SPACING = bytes([0x1B, 0x33, 24])
 
 
 def build_printer(config: Dict):
@@ -42,25 +44,25 @@ def build_printer(config: Dict):
     return File(devfile=device)
 
 
-def _set_line_spacing(printer, spacing: int = 24) -> None:
-    """ESC 3 n: set line spacing in 1/180 inches (default ~24)."""
-    printer._raw(bytes([0x1B, 0x33, spacing]))
-
-
-def _apply_style(printer, style: str) -> None:
-    """Apply ESC/POS font, size, alignment and bold by raw bytes."""
+def _style_command(style: str) -> bytes:
+    """Return ESC/POS bytes for the requested style."""
     if style == "big_center":
-        printer._raw(FONT_A + CENTER + BOLD_ON + SIZE_1X2)
+        return FONT_A + CENTER + BOLD_ON + SIZE_1X2
     elif style == "normal_center":
-        printer._raw(FONT_A + CENTER + BOLD_OFF + SIZE_1X1)
+        return FONT_A + CENTER + BOLD_OFF + SIZE_1X1
     elif style == "normal_left":
-        printer._raw(FONT_A + LEFT + BOLD_OFF + SIZE_1X1)
+        return FONT_A + LEFT + BOLD_OFF + SIZE_1X1
     elif style == "normal_sep":
-        printer._raw(FONT_A + LEFT + BOLD_OFF + SIZE_1X1)
+        return FONT_A + LEFT + BOLD_OFF + SIZE_1X1
     elif style == "small_left":
-        printer._raw(FONT_B + LEFT + BOLD_OFF + SIZE_1X1)
+        return FONT_B + LEFT + BOLD_OFF + SIZE_1X1
     elif style == "small_sep":
-        printer._raw(FONT_B + LEFT + BOLD_OFF + SIZE_1X1)
+        return FONT_B + LEFT + BOLD_OFF + SIZE_1X1
+    return b""
+
+
+def _encode(text: str) -> bytes:
+    return text.encode("cp437", "replace")
 
 
 def print_receipt(lines: List[Line], printer_config: Dict) -> None:
@@ -71,15 +73,15 @@ def print_receipt(lines: List[Line], printer_config: Dict) -> None:
         raise
 
     try:
-        p.codepage = "CP437"
-        _set_line_spacing(p, 24)
+        # Initial printer setup
+        p._raw(CP437 + LINE_SPACING + FONT_A + LEFT + BOLD_OFF + SIZE_1X1)
 
         for style, text in lines:
             if style == "blank":
-                p.text("\n")
+                p._raw(b"\n")
                 continue
-            _apply_style(p, style)
-            p.text(text + "\n")
+            # Send style command and text in a single _raw call to preserve order
+            p._raw(_style_command(style) + _encode(text) + b"\n")
 
         if printer_config.get("cut", True):
             try:
