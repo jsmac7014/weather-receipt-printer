@@ -19,9 +19,9 @@ FONT_A = b"\x1b\x4d\x00"
 FONT_B = b"\x1b\x4d\x01"
 SIZE_1X1 = b"\x1d\x21\x00"
 SIZE_1X2 = b"\x1d\x21\x10"
-SIZE_2X2 = b"\x1d\x21\x11"
 CP437 = b"\x1b\x74\x00"
 LINE_SPACING = bytes([0x1B, 0x33, 24])
+RESET = b"\x1b\x40"
 
 
 def build_printer(config: Dict):
@@ -73,15 +73,22 @@ def print_receipt(lines: List[Line], printer_config: Dict) -> None:
         raise
 
     try:
-        # Initial printer setup
-        p._raw(CP437 + LINE_SPACING + FONT_A + LEFT + BOLD_OFF + SIZE_1X1)
+        # Build the whole receipt in a single buffer and send it once.
+        # This guarantees the order and avoids per-line buffering issues.
+        buffer = bytearray()
+        buffer.extend(RESET)
+        buffer.extend(CP437)
+        buffer.extend(LINE_SPACING)
 
         for style, text in lines:
             if style == "blank":
-                p._raw(b"\n")
+                buffer.extend(b"\n")
                 continue
-            # Send style command and text in a single _raw call to preserve order
-            p._raw(_style_command(style) + _encode(text) + b"\n")
+            buffer.extend(_style_command(style))
+            buffer.extend(_encode(text))
+            buffer.extend(b"\n")
+
+        p._raw(bytes(buffer))
 
         if printer_config.get("cut", True):
             try:
