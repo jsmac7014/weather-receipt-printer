@@ -16,14 +16,6 @@ def center(text: str, width: int, fill: str = " ") -> str:
     return fill * left + text + fill * right
 
 
-def left(text: str, width: int) -> str:
-    return text + " " * max(0, width - len(text))
-
-
-def right(text: str, width: int) -> str:
-    return " " * max(0, width - len(text)) + text
-
-
 def format_day_label(d: date) -> str:
     today = date.today()
     label = f"{d.month}/{d.day}"
@@ -37,7 +29,7 @@ def format_day_label(d: date) -> str:
 
 
 def short_weather(description: str) -> str:
-    """Shorten weather descriptions for the forecast column."""
+    """Shorten weather descriptions for the forecast row."""
     mapping = {
         "Mainly clear": "M clear",
         "Partly cloudy": "P cldy",
@@ -59,21 +51,11 @@ def short_weather(description: str) -> str:
         "Moderate rain showers": "Shower",
         "Violent rain showers": "H shwr",
     }
-    return mapping.get(description, description[:6])
-
-
-def forecast_row(day_text: str, desc: str, temp_text: str, width: int = 21) -> str:
-    """Build a three-column forecast row: date | weather | temp."""
-    col1_w = 6
-    col3_w = 7
-    col2_w = width - col1_w - col3_w
-    return left(day_text, col1_w) + center(desc, col2_w)[:col2_w] + right(temp_text, col3_w)
+    return mapping.get(description, description[:7])
 
 
 def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line]:
     lines: List[Line] = []
-
-    # All text now prints with Font A, so every line must fit within 'columns'.
     w = columns
 
     # Top decoration
@@ -92,11 +74,11 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
     lines.append(("big_center", f"{report.current.temperature:.1f}C"))
     lines.append(("blank", ""))
 
-    # Detail rows (normal font)
-    lines.append(("normal_left", f"Feels like: {report.current.apparent_temperature:.1f}C"))
-    lines.append(("normal_left", f"Humidity: {report.current.humidity}%"))
-    lines.append(("normal_left", f"Wind: {report.current.wind_speed:.1f}m/s"))
-    lines.append(("normal_left", f"Precip: {report.current.precipitation:.1f}mm"))
+    # Detail rows (center aligned)
+    lines.append(("normal_center", f"Feels like: {report.current.apparent_temperature:.1f}C"))
+    lines.append(("normal_center", f"Humidity: {report.current.humidity}%"))
+    lines.append(("normal_center", f"Wind: {report.current.wind_speed:.1f}m/s"))
+    lines.append(("normal_center", f"Precip: {report.current.precipitation:.1f}mm"))
     lines.append(("blank", ""))
 
     # Forecast header (big)
@@ -106,11 +88,19 @@ def format_weather_report(report: WeatherReport, columns: int = 21) -> List[Line
         day_text = format_day_label(forecast.date)
         temp_text = f"{forecast.temp_min:.0f}/{forecast.temp_max:.0f}C"
         desc = short_weather(forecast.description)
-        lines.append(("small_left", forecast_row(day_text, desc, temp_text, w)))
+        row = f"{day_text} {desc} {temp_text}"
+        if len(row) > w:
+            avail = w - len(day_text) - len(temp_text) - 2
+            desc = desc[:max(avail, 3)]
+            row = f"{day_text} {desc} {temp_text}"
+        lines.append(("normal_center", row))
     lines.append(("blank", ""))
 
     # Footer
     lines.append(("normal_center", "Open-Meteo"))
     lines.append(("normal_sep", "=" * w))
+    # Extra blank lines to avoid cutting off the footer
+    lines.append(("blank", ""))
+    lines.append(("blank", ""))
 
     return lines

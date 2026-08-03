@@ -102,6 +102,9 @@ def print_receipt(lines: List[Line], printer_config: Dict) -> None:
             _apply_style(p, style)
             p.text(text + "\n")
 
+        # Add trailing blank lines so the footer is not cut off.
+        p.text("\n\n")
+
         if printer_config.get("cut", True):
             try:
                 p.cut()
